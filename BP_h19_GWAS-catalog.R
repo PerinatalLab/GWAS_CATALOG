@@ -1,4 +1,4 @@
-load("Desktop/Work/GWAS_catalog/gwas_catalog_v1.0-associations_e90_r2017-11-27.Rdata")
+load("~/Desktop/Work/GWAS_catalog/gwas_catalog_v1.0-associations_e90_r2017-11-27.Rdata")
 
 table(substr(a$SNPS,1,2))
 a$SNPS[which(substr(a$SNPS,1,2)!="rs")]
@@ -18,9 +18,10 @@ s$name= as.character(s$name)
 s$chrom= as.character(s$chrom)
 s= s[(grep("_", s$chrom,invert=T)),]
 s= s[!duplicated(s$name),]
-s= s[,c(3,4)]
-colnames(s)= c("snp","bp_hg19")
-a1= merge(a,s, by.x= "SNPS", by.y="snp", all.x=T)
+s= s[,c(1,3,4)]
+colnames(s)= c("chr","bp_hg19","snp")
 
-save(a1)
+s$chr=gsub('chr', '', s$chr)
+
+write.table(s,"~/Desktop/Work/GWAS_catalog/snplist_bp_hg19.txt", row.names=F, quote=F, sep="\t")
 
