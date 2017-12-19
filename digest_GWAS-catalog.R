@@ -1,3 +1,4 @@
+#!/usr/local/bin/Rscript
 
 ### script used to load and digest GWAS catalog
 ### 2017 Dec 04. Jonas B.
@@ -70,6 +71,7 @@ for (i in 1:nrow(tmp)) {
 }  # ignore warnings
 
 # preview encountered problems:
+cat("\t encountered these problematic entries: \n")
 print(prb)
 
 # doublecheck SNP ID types
