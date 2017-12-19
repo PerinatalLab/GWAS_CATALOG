@@ -60,7 +60,7 @@ snps  # we can safely get rid of this one..
 snps = unique(c(gr1,gr2,gr3,gr4,gr5))
 
 # number of still problematic instances
-length(snps) - length(grep("rs[0-9]+$",snps))
+length(snps) - length(grep("rs[0-9]+$",snps)) # HLA region SNPs
 
 # pre-final list of SNP names
 ix = grep("rs[0-9]+$",snps)
@@ -77,32 +77,90 @@ table(nchar(snps)) # looks good!
 snps = unique(snps)
 
 # export to UCSC browser
-#write.table(snps,"~/Desktop/Work/GWAS_catalog/temp_GWAScatalog_snpList.txt", row.names=F, quote=F) # @Pol
-write.table(snps,"~/Downloads/temp_GWAScatalog_snpList.txt", row.names=F, quote=F) # @Jon
-
+# (due to the UCSC retardedness, must be done in batches)
+write.table(snps[1:10000],"~/Downloads/temp_GWAScatalog_snpList_1.txt", row.names=F,col.names = F, quote=F) # @Jon
+write.table(snps[10001:20000],"~/Downloads/temp_GWAScatalog_snpList_2.txt", row.names=F,col.names = F, quote=F) # @Jon
+write.table(snps[20001:30000],"~/Downloads/temp_GWAScatalog_snpList_3.txt", row.names=F,col.names = F, quote=F) # @Jon
+write.table(snps[30001:40000],"~/Downloads/temp_GWAScatalog_snpList_4.txt", row.names=F,col.names = F, quote=F) # @Jon
+write.table(snps[40001:length(snps)],"~/Downloads/temp_GWAScatalog_snpList_5.txt", row.names=F,col.names = F, quote=F) # @Jon
 
 #=====================================================
 ...
-... upload to UCSC and extract GRCh37/hg19 coordinates
+... upload to 5 batches to UCSC and extract GRCh37/hg19 coordinates
 ...
+
+# batch1. 22 of the 10000 given identifiers have no match in table snp150, field name.
+# batch2. 66 of the 10000 given identifiers have no match in table snp150, field name. 
+# batch3. 123 of the 10000 given identifiers have no match in table snp150, field name.
+# batch4. 228 of the 10000 given identifiers have no match in table snp150, field name. 
+# batch5. 5 of the 867 given identifiers have no match in table snp150, field name. 
+
+... unhash headers
 #=====================================================
 
 # load the export from UCSC
-#s = read.table("~/Desktop/Work/GWAS_catalog/temp_GWAScatalog_snpPositions_hg19.txt",h=T,sep="\t",stringsAsFactors = F) # @Pol
-s = read.table("~/Downloads/temp_GWAScatalog_snpPositions_hg19.txt",h=T,stringsAsFactors = F,sep="\t") # @Jon
+s1 = read.table("~/Downloads/part1_temp.txt",h=T,stringsAsFactors = F,sep="\t") # @Jon
+s2 = read.table("~/Downloads/part2_temp.txt",h=T,stringsAsFactors = F,sep="\t") # @Jon
+s3 = read.table("~/Downloads/part3_temp.txt",h=T,stringsAsFactors = F,sep="\t") # @Jon
+s4 = read.table("~/Downloads/part4_temp.txt",h=T,stringsAsFactors = F,sep="\t") # @Jon
+s5 = read.table("~/Downloads/part5_temp.txt",h=T,stringsAsFactors = F,sep="\t") # @Jon
 
-# eliminate nonsense
+# combine
+s = rbind(s1,s2,s3,s4,s5)
+
+# inspect
+table(nchar(s$chrom))
+s$chrom[nchar(s$chrom)==13][1:10]
+s$chrom[nchar(s$chrom)==14][1:10]
+s$chrom[nchar(s$chrom)==15][1:10]
+
+# leave only normal chromosome names
 s = s[which(nchar(s$chrom) %in% c(4,5)),] # no haplo blocks (non-chromosomes)
 
-# recode
+# preview
+table(s$chrom)
+
+# recode chromosome names
 s$chrom = gsub('chr', '', s$chrom)
 s$chrom[which(s$chrom %in% c("x","X"))] = 23
+s$chrom[which(s$chrom %in% c("y","Y"))] = 24
 s$chrom = as.numeric(s$chrom)
 
 # reformat
-s = s[,c("chrom","name","chromEnd")]
+s = s[order(s$chrom,s$chromEnd),] # thus Y (least important) will be in the end
+head(s)
+
+# check for duplications
+table(table(s$name))
+s[which(s$name %in% s$name[which(duplicated(s$name))]),]  # pseudoautosomal? rs306896
+
+# remove duplications
+s = s[which(!duplicated(s$name)),] # Y chr will be removed, OK for me
+
+# meta
+nrow(s)
+
+### final checks
+
+# inspect SNP names
+table(table(s$name)) # ok
+table(nchar(s$name)) # ok
+
+# inspect certainty of position
+dif = s$chromEnd-s$chromStart
+table(dif) # non =1 values might have problems in merging with HRC imputed data
+
+# inspect: same position, different SNP names
+pos = paste(s$chrom,s$chromEnd,sep="_")
+table(table(pos))
+s[which(pos %in% pos[duplicated(pos)]),] # might need actual allele names to resolve this
+
 
 # save
-#save(list="s", file="~/Desktop/Work/GWAS_catalog/e90_r2017-11-27_hg19positions.Rdata") # @Pol
 save(list="s", file="~/Dropbox/GIT/GWAS_CATALOG/e90_r2017-11-27_hg19positions.Rdata") # @Jon
 
+
+# summary:
+# 444 SNP names were not found (out of 40867)
+# total number of unique remaining SNP names: 40422
+# Jonas B. 2017 Dec 19
